@@ -1,0 +1,73 @@
+name: sdlab
+
+x-garage: &garage
+  image: dxflrs/garage:v2.3.0
+  mem_limit: 128m
+  environment:
+    GARAGE_ALLOW_WORLD_READABLE_SECRETS: "true"
+
+services:
+  garage1:
+    <<: *garage
+    container_name: garage1
+    volumes:
+      - ./garage1.toml:/etc/garage.toml:ro
+      - ./dados/g1:/var/lib/garage
+    networks:
+      interna:
+        ipv4_address: 172.30.0.21
+      clientes:
+        ipv4_address: 172.31.0.21
+
+  garage2:
+    <<: *garage
+    container_name: garage2
+    volumes:
+      - ./garage2.toml:/etc/garage.toml:ro
+      - ./dados/g2:/var/lib/garage
+    networks:
+      interna:
+        ipv4_address: 172.30.0.22
+      clientes:
+        ipv4_address: 172.31.0.22
+
+  garage3:
+    <<: *garage
+    container_name: garage3
+    volumes:
+      - ./garage3.toml:/etc/garage.toml:ro
+      - ./dados/g3:/var/lib/garage
+    networks:
+      interna:
+        ipv4_address: 172.30.0.23
+      clientes:
+        ipv4_address: 172.31.0.23
+
+  cliente:
+    image: python:3.12-alpine
+    container_name: cliente
+    mem_limit: 128m
+    command: sh -c "pip install -q 'boto3==1.35.90' && touch /tmp/ready && sleep infinity"
+    environment:
+      AWS_REQUEST_CHECKSUM_CALCULATION: when_required
+      AWS_RESPONSE_CHECKSUM_VALIDATION: when_required
+    env_file:
+      - path: .env
+        required: false
+    volumes:
+      - ./s3.py:/s3.py:ro
+    networks:
+      clientes:
+        ipv4_address: 172.31.0.100
+
+networks:
+  interna:
+    name: sdlab-interna
+    ipam:
+      config:
+        - subnet: 172.30.0.0/24
+  clientes:
+    name: sdlab-clientes
+    ipam:
+      config:
+        - subnet: 172.31.0.0/24
